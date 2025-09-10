@@ -5,15 +5,21 @@ phases:
     commands:
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 677276116587.dkr.ecr.us-east-1.amazonaws.com
+      - IMAGE_REPO_NAME=testapp
+      - IMAGE_TAG=$CODEBUILD_RESOLVED_SOURCE_VERSION
   build:
     commands:
       - echo Build Docker image...
-      - docker build -t simple-docker-service-0e7e312e04ab .
-      - docker tag simple-docker-service-0e7e312e04ab:latest 677276116587.dkr.ecr.us-east-1.amazonaws.com/blue-green-demo:latest
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG 677276116587.dkr.ecr.us-east-1.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
   post_build:
     commands:
-      - echo Push Docker image...
-      - docker push 677276116587.dkr.ecr.us-east-1.amazonaws.com/blue-green-demo:latest
-
+      - echo Pushing Docker image...
+      - docker push 677276116587.dkr.ecr.us-east-1.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - echo Creating appspec.json...
+      - printf '{"ImageURI":"%s"}' <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG > imageDetail.json
 artifacts:
-  files: '**/*'
+  files: 
+    - appspec.yml
+    - scripts/*
+    - imageDetail.json
